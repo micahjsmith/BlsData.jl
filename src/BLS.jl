@@ -1,6 +1,6 @@
 module BLS
 
-export BlsConnection, fetch
+export BlsConnection, get_data
 
 const DEFAULT_API_URL = "http://api.bls.gov/publicAPI/v2/timeseries/data/"
 
@@ -13,22 +13,25 @@ function BlsConnection(url=DEFAULT_API_URL; key="")
     BlsConnection(url, key)
 end
 
+api_url(b::BlsConnection) = b.url
+api_key(b::BlsConnection) = b.key
+
 using Requests
 import Requests: post
 import JSON
 
 """
 """
-function fetch(b::BlsConnection, series::AbstractString;
+function get_data(b::BlsConnection, series::AbstractString;
                startyear::Int=Dates.year(now())-10,
                endyear::Int=Dates.year(now()),
                catalog::Bool=false)
-    return fetch(b, [series]; startyear=startyear, endyear=endyear, catalog=catalog)
+    return get_data(b, [series]; startyear=startyear, endyear=endyear, catalog=catalog)
 end
 
 """
 """
-function fetch(b::BlsConnection, series::Vector{AbstractString};
+function get_data{T<:AbstractString}(b::BlsConnection, series::Array{T, 1};
                startyear::Int=Dates.year(now())-10,
                endyear::Int=Dates.year(now()),
                catalog::Bool=false)
