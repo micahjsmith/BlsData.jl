@@ -74,10 +74,42 @@ function get_data{T<:AbstractString}(b::BlsConnection, series::Array{T, 1};
 
     # Parse response into DataFrames, one for each series
     n_series = length(response_json["Results"]["series"])
-    for i = 1:n_series
+    data = Array{Any}(n_series)
+    for (i, series) in enumerate(response_json["Results"]["series"])
+        seriesID = series["seriesID"]
+        out = pmap(parse_period_dict, series["data"])
+
+        data[i] = out
     end
 
-    return response_json
+    return data
+end
+
+function parse_period_dict{T<:AbstractString}(dict::Dict{T,Any})
+    value = float(dict["value"])
+    year  = parse(Int, dict["year"])
+
+    period = dict["period"]
+    # Monthly data
+    if ismatch(r"M\d\d", period) && period ≠ "M13"
+        month = parse(Int, period[2:3])
+        date = Date(year, month, 1)
+
+    # Quarterly data
+    elseif ismatch(r"Q\d\d", period)
+        quarter = parse(Int, period[3])
+        date = Date(year, 3*quarter-2, 1)
+
+    # Annual data
+    elseif ismatch(r"A\d\d", period)
+        date = Date(year, 1, 1)
+
+    # Not implemented
+    else
+        error("Data of frequency ", period, " not implemented")
+    end
+    
+    return (date, value)
 end
 
 end # module
