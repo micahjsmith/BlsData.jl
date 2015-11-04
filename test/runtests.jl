@@ -1,8 +1,8 @@
-using BLS
+using BlsData
 using Base.Test
 
-b0 = BlsConnection()
-b1 = BlsConnection(key="test")
+b0 = BLS()
+b1 = BLS(key="test")
 
 data = get_data(b0, "PRS85006092")
 data = get_data(b0, "PRS85006092"; catalog=true)

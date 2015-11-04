@@ -1,32 +1,32 @@
-module BLS
+module BlsData
 
 using Requests
 using DataFrames
 import Requests: post
 import JSON
 
-export BlsConnection, get_data
+export BLS, get_data
 
 const DEFAULT_API_URL = "http://api.bls.gov/publicAPI/v2/timeseries/data/"
 const BLS_RESPONSE_SUCCESS = "REQUEST_SUCCEEDED"
 const BLS_RESPONSE_CATALOG_FAIL1 = "unable to get catalog data"
 const BLS_RESPONSE_CATALOG_FAIL2 = "catalog has been disabled"
 
-type BlsConnection
+type BLS
     url::AbstractString
     key::AbstractString
 end
 
-function BlsConnection(url=DEFAULT_API_URL; key="")
-    BlsConnection(url, key)
+function BLS(url=DEFAULT_API_URL; key="")
+    BLS(url, key)
 end
 
-api_url(b::BlsConnection) = b.url
-api_key(b::BlsConnection) = b.key
+api_url(b::BLS) = b.url
+api_key(b::BLS) = b.key
 
 """
 """
-function get_data(b::BlsConnection, series::AbstractString;
+function get_data(b::BLS, series::AbstractString;
                startyear::Int=Dates.year(now())-9,
                endyear::Int=Dates.year(now()),
                catalog::Bool=false)
@@ -35,7 +35,7 @@ end
 
 """
 """
-function get_data{T<:AbstractString}(b::BlsConnection, series::Array{T, 1};
+function get_data{T<:AbstractString}(b::BLS, series::Array{T, 1};
                startyear::Int=Dates.year(now())-9,
                endyear::Int=Dates.year(now()),
                catalog::Bool=false)
@@ -60,7 +60,7 @@ function get_data{T<:AbstractString}(b::BlsConnection, series::Array{T, 1};
 
     # Response okay?
     if response_json["status"] ≠ BLS_RESPONSE_SUCCESS
-        warning("Request failed with message '", response_json[status], "'")
+        warn("Request failed with message '", response_json["status"], "'")
         return nothing
     end
 
@@ -75,16 +75,24 @@ function get_data{T<:AbstractString}(b::BlsConnection, series::Array{T, 1};
 
     # Parse response into DataFrames, one for each series
     n_series = length(response_json["Results"]["series"])
-    data = Array{DataFrames.DataFrame,1}(n_series)
+    out = Array{Tuple{T, T, DataFrames.DataFrame},1}(n_series)
     for (i, series) in enumerate(response_json["Results"]["series"])
         seriesID = series["seriesID"]
-        out = map(parse_period_dict, series["data"])
-        dates = flipdim([x[1] for x in out],1)
-        values = flipdim([x[2] for x in out],1)
-        data[i] = DataFrame(date=dates, value=values)
+        if catalog_okay
+            catalog = series["catalog"]
+        else
+            catalog = ""
+        end
+
+        data = map(parse_period_dict, series["data"])
+        dates = flipdim([x[1] for x in data],1)
+        values = flipdim([x[2] for x in data],1)
+        df = DataFrame(date=dates, value=values)
+
+        out[i] = (seriesID, catalog, df)
     end
 
-    return data
+    return out
 end
 
 function parse_period_dict{T<:AbstractString}(dict::Dict{T,Any})
