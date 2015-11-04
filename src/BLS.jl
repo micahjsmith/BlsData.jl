@@ -1,6 +1,7 @@
 module BLS
 
 using Requests
+using DataFrames
 import Requests: post
 import JSON
 
@@ -74,12 +75,13 @@ function get_data{T<:AbstractString}(b::BlsConnection, series::Array{T, 1};
 
     # Parse response into DataFrames, one for each series
     n_series = length(response_json["Results"]["series"])
-    data = Array{Any}(n_series)
+    data = Array{DataFrames.DataFrame,1}(n_series)
     for (i, series) in enumerate(response_json["Results"]["series"])
         seriesID = series["seriesID"]
-        out = pmap(parse_period_dict, series["data"])
-
-        data[i] = out
+        out = map(parse_period_dict, series["data"])
+        dates = flipdim([x[1] for x in out],1)
+        values = flipdim([x[2] for x in out],1)
+        data[i] = DataFrame(date=dates, value=values)
     end
 
     return data
