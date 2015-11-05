@@ -6,31 +6,42 @@ import Requests: post
 import JSON
 
 export BLS, get_data
+export BlsSeries, id, series, catalog
 
 const DEFAULT_API_URL = "http://api.bls.gov/publicAPI/v2/timeseries/data/"
 const BLS_RESPONSE_SUCCESS = "REQUEST_SUCCEEDED"
 const BLS_RESPONSE_CATALOG_FAIL1 = "unable to get catalog data"
 const BLS_RESPONSE_CATALOG_FAIL2 = "catalog has been disabled"
 
+# BLS connection type
 type BLS
     url::AbstractString
     key::AbstractString
 end
-
 function BLS(url=DEFAULT_API_URL; key="")
     BLS(url, key)
 end
-
 api_url(b::BLS) = b.url
 api_key(b::BLS) = b.key
 
+# Output from get_data
+type BlsSeries
+    id::AbstractString
+    series::DataFrame
+    catalog::Array{AbstractString,1}
+end
+EMPTY_RESPONSE() = BlsSeries("",DataFrame(),[""])
+id(s::BlsSeries)      = s.id
+series(s::BlsSeries)  = s.series
+catalog(s::BlsSeries) = s.catalog
+
 """
 """
-function get_data(b::BLS, series::AbstractString;
+function get_data{T<:AbstractString}(b::BLS, series::T;
                startyear::Int=Dates.year(now())-9,
                endyear::Int=Dates.year(now()),
                catalog::Bool=false)
-    return get_data(b, [series]; startyear=startyear, endyear=endyear, catalog=catalog)
+    return get_data(b, [series]; startyear=startyear, endyear=endyear, catalog=catalog)[1]
 end
 
 """
@@ -39,6 +50,8 @@ function get_data{T<:AbstractString}(b::BLS, series::Array{T, 1};
                startyear::Int=Dates.year(now())-9,
                endyear::Int=Dates.year(now()),
                catalog::Bool=false)
+
+    n_series = length(series)
 
     # Setup payload.
     headers = Dict("Content-Type" => "application/json")
@@ -61,7 +74,9 @@ function get_data{T<:AbstractString}(b::BLS, series::Array{T, 1};
     # Response okay?
     if response_json["status"] ≠ BLS_RESPONSE_SUCCESS
         warn("Request failed with message '", response_json["status"], "'")
-        return nothing
+
+        # Return empty response for each series
+        return [EMPTY_RESPONSE() for i in 1:n_series]
     end
 
     # Catalog okay?
@@ -74,8 +89,8 @@ function get_data{T<:AbstractString}(b::BLS, series::Array{T, 1};
     end
 
     # Parse response into DataFrames, one for each series
-    n_series = length(response_json["Results"]["series"])
-    out = Array{Tuple{T, T, DataFrames.DataFrame},1}(n_series)
+    @assert n_series == length(response_json["Results"]["series"])
+    out = Array{BlsSeries,1}(n_series)
     for (i, series) in enumerate(response_json["Results"]["series"])
         seriesID = series["seriesID"]
         if catalog_okay
@@ -83,13 +98,14 @@ function get_data{T<:AbstractString}(b::BLS, series::Array{T, 1};
         else
             catalog = ""
         end
+        catalog = vcat(catalog)
 
         data = map(parse_period_dict, series["data"])
         dates = flipdim([x[1] for x in data],1)
         values = flipdim([x[2] for x in data],1)
         df = DataFrame(date=dates, value=values)
 
-        out[i] = (seriesID, catalog, df)
+        out[i] = BlsSeries(seriesID, df, catalog)
     end
 
     return out
