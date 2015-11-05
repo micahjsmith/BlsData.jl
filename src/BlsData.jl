@@ -14,6 +14,24 @@ const BLS_RESPONSE_CATALOG_FAIL1 = "unable to get catalog data"
 const BLS_RESPONSE_CATALOG_FAIL2 = "catalog has been disabled"
 
 # BLS connection type
+"""
+A connection to the BLS API.
+
+Constructors
+------------
+BLS()                                          # Default connection
+BLS(url::AbstractString; key::AbstractString)  # Custom connection
+
+Arguments
+---------
+*`url`: Base url to the BLS API.
+*`key`: Registration key provided by the BLS.
+
+Notes
+-----
+A valid registration key increases the allowable number of requests per day as well making
+catalog metadata available.
+"""
 type BLS
     url::AbstractString
     key::AbstractString
@@ -24,18 +42,57 @@ end
 api_url(b::BLS) = b.url
 api_key(b::BLS) = b.key
 
-# Output from get_data
+# Output from `get_data`
+"""
+A time series with metadata returned from a `get_data` call.
+
+Prefer to access fields with
+```
+id(s::BlsSeries)
+data(s::BlsSeries)
+catalog(s::BlsSeries)
+```
+"""
 type BlsSeries
     id::AbstractString
-    series::DataFrame
+    df::DataFrame
     catalog::Array{AbstractString,1}
 end
 EMPTY_RESPONSE() = BlsSeries("",DataFrame(),[""])
 id(s::BlsSeries)      = s.id
-series(s::BlsSeries)  = s.series
+data(s::BlsSeries)    = s.df
 catalog(s::BlsSeries) = s.catalog
 
 """
+```
+get_data{T<:AbstractString}(b::BLS, series::T;
+               startyear::Int=Dates.year(now())-9,
+               endyear::Int=Dates.year(now()),
+               catalog::Bool=false)
+```
+```
+get_data{T<:AbstractString}(b::BLS, series::Array{T,1};
+               startyear::Int=Dates.year(now())-9,
+               endyear::Int=Dates.year(now()),
+               catalog::Bool=false)
+```
+Request one or multiple series from the BLS API.
+
+Arguments
+---------
+* `b`: A BLS connection
+* `series`: A string, or array of strings, identifying the time series
+* `startyear`: A four-digit year identifying the start of the data request
+* `endyear`: A four-digit year identifying the end of the data request
+* `catalog`: Whether to return any available metadata about the series
+
+Returns
+-------
+An object, or array of objects, of type BlsSeries
+
+Notes
+-----
+The BLS truncates any requests for data for a period longer than 10 years.
 """
 function get_data{T<:AbstractString}(b::BLS, series::T;
                startyear::Int=Dates.year(now())-9,
@@ -43,9 +100,6 @@ function get_data{T<:AbstractString}(b::BLS, series::T;
                catalog::Bool=false)
     return get_data(b, [series]; startyear=startyear, endyear=endyear, catalog=catalog)[1]
 end
-
-"""
-"""
 function get_data{T<:AbstractString}(b::BLS, series::Array{T, 1};
                startyear::Int=Dates.year(now())-9,
                endyear::Int=Dates.year(now()),
