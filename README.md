@@ -29,3 +29,9 @@ Simply run
 ```julia
 julia> Pkg.clone("https://github.com/micahjsmith/BlsData.jl.git")
 ```
+
+## Notes
+
+Currently, `get_data` returns one, or an array of, `BlsSeries`, a simple type which stores
+the series ID, data, and metadata. This could be changed to return a more usable `DataFrame`
+with multiple columns and missing values.
