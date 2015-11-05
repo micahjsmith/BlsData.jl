@@ -1,4 +1,5 @@
 # BLS
+[![Build Status](https://travis-ci.org/micahjsmith/BlsData.jl.svg?branch=master)](https://travis-ci.org/micahjsmith/BlsData.jl)
 
 A basic Julia interface to pull data from the Bureau of Labor Statistics using
 their Public API [here](http://www.bls.gov/developers/home.htm).
@@ -9,7 +10,8 @@ Basic usage:
 ```
 using BlsData
 b = BLS()
-data = get_data(b, "LNS11000000")
+one_series = get_data(b, "LNS11000000")
+multiple_series = get_data(b, ["LNS11000000", "PRS85006092"])
 ```
 
 Or, register on the BLS website for a Public Data API account
