@@ -1,3 +1,5 @@
+isdefined(Base, :__precompile__) && __precompile__()
+
 module BlsData
 
 using Requests
@@ -5,7 +7,7 @@ using DataFrames
 import Requests: post
 import JSON
 
-export BLS, get_data
+export Bls, get_data
 export BlsSeries, id, series, catalog
 
 const DEFAULT_API_URL            = "http://api.bls.gov/publicAPI/v2/timeseries/data/"
@@ -16,14 +18,13 @@ const LIMIT_DAILY_QUERY          = [25, 500]
 const LIMIT_SERIES_PER_QUERY     = [25, 50]
 const LIMIT_YEARS_PER_QUERY      = [10, 20]
 
-# BLS connection type
 """
 A connection to the BLS API.
 
 Constructors
 ------------
-* `BLS()`
-* `BLS(url::AbstractString; key::AbstractString)`
+* `Bls()`
+* `Bls(url::AbstractString; key::AbstractString)`
 
 Arguments
 ---------
@@ -35,23 +36,23 @@ Notes
 A valid registration key increases the allowable number of requests per day as well making
 catalog metadata available.
 """
-type BLS
+type Bls
     url::AbstractString
     key::AbstractString
     n_requests::Int16
     t_created::DateTime
 end
-function BLS(url=DEFAULT_API_URL; key="")
+function Bls(url=DEFAULT_API_URL; key="")
     n_requests = 0
     t_created = now()
-    BLS(url, key, n_requests, t_created)
+    Bls(url, key, n_requests, t_created)
 end
-api_url(b::BLS) = b.url
-api_key(b::BLS) = b.key
-api_version(b::BLS) = 1 + !isempty(api_key(b))
-requests_made(b::BLS) = b.n_requests
-requests_remaining(b::BLS) = LIMIT_DAILY_QUERY[api_version(b)] - requests_made(b)
-function increment_requests(b::BLS)
+api_url(b::Bls) = b.url
+api_key(b::Bls) = b.key
+api_version(b::Bls) = 1 + !isempty(api_key(b))
+requests_made(b::Bls) = b.n_requests
+requests_remaining(b::Bls) = LIMIT_DAILY_QUERY[api_version(b)] - requests_made(b)
+function increment_requests(b::Bls)
     # Reset request if we are in a new day!
     if Dates.day(now()) ≠ Dates.day(b.t_created)
         b.t_created = now()
@@ -61,7 +62,7 @@ function increment_requests(b::BLS)
     b.n_requests += 1
 end
 
-function Base.show(io::IO, b::BLS)
+function Base.show(io::IO, b::Bls)
     @printf io "BLS API v%d Connection\n"   api_version(b)
     @printf io "\turl: %s\n"                api_url(b)
     @printf io "\tkey: %s\n"                api_key(b)
@@ -69,7 +70,6 @@ function Base.show(io::IO, b::BLS)
     @printf io "\trequests remaining (this cxn): %d\n" requests_remaining(b)
 end
 
-# Output from `get_data`
 """
 A time series with metadata returned from a `get_data` call.
 
@@ -92,13 +92,13 @@ catalog(s::BlsSeries) = s.catalog
 
 """
 ```
-get_data{T<:AbstractString}(b::BLS, series::T;
+get_data{T<:AbstractString}(b::Bls, series::T;
                startyear::Int=Dates.year(now())-9,
                endyear::Int=Dates.year(now()),
                catalog::Bool=false)
 ```
 ```
-get_data{T<:AbstractString}(b::BLS, series::Array{T,1};
+get_data{T<:AbstractString}(b::Bls, series::Array{T,1};
                startyear::Int=Dates.year(now())-9,
                endyear::Int=Dates.year(now()),
                catalog::Bool=false)
@@ -107,7 +107,7 @@ Request one or multiple series from the BLS API.
 
 Arguments
 ---------
-* `b`: A BLS connection
+* `b`: A Bls connection
 * `series`: A string, or array of strings, identifying the time series
 * `startyear`: A four-digit year identifying the start of the data request
 * `endyear`: A four-digit year identifying the end of the data request
@@ -119,15 +119,16 @@ An object, or array of objects, of type BlsSeries
 
 Notes
 -----
-The BLS truncates any requests for data for a period longer than 10 years.
+The BLS truncates any requests for data for a period longer than 20 years (or 10 years
+without a registration key).
 """
-function get_data{T<:AbstractString}(b::BLS, series::T;
+function get_data{T<:AbstractString}(b::Bls, series::T;
                startyear::Int = Dates.year(now()) - LIMIT_YEARS_PER_QUERY[api_version(b)]-1,
                endyear::Int = Dates.year(now()),
                catalog::Bool = false)
     return get_data(b, [series]; startyear=startyear, endyear=endyear, catalog=catalog)[1]
 end
-function get_data{T<:AbstractString}(b::BLS, series::Array{T, 1};
+function get_data{T<:AbstractString}(b::Bls, series::Array{T, 1};
                startyear::Int = Dates.year(now()) - LIMIT_YEARS_PER_QUERY[api_version(b)]-1,
                endyear::Int = Dates.year(now()),
                catalog::Bool = false)
