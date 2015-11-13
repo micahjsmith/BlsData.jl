@@ -8,10 +8,13 @@ import JSON
 export BLS, get_data
 export BlsSeries, id, series, catalog
 
-const DEFAULT_API_URL = "http://api.bls.gov/publicAPI/v2/timeseries/data/"
-const BLS_RESPONSE_SUCCESS = "REQUEST_SUCCEEDED"
+const DEFAULT_API_URL            = "http://api.bls.gov/publicAPI/v2/timeseries/data/"
+const BLS_RESPONSE_SUCCESS       = "REQUEST_SUCCEEDED"
 const BLS_RESPONSE_CATALOG_FAIL1 = "unable to get catalog data"
 const BLS_RESPONSE_CATALOG_FAIL2 = "catalog has been disabled"
+const LIMIT_DAILY_QUERY          = [25, 500]
+const LIMIT_SERIES_PER_QUERY     = [25, 50]
+const LIMIT_YEARS_PER_QUERY      = [10, 20]
 
 # BLS connection type
 """
@@ -19,13 +22,13 @@ A connection to the BLS API.
 
 Constructors
 ------------
-BLS()                                          # Default connection
-BLS(url::AbstractString; key::AbstractString)  # Custom connection
+* `BLS()`
+* `BLS(url::AbstractString; key::AbstractString)`
 
 Arguments
 ---------
-*`url`: Base url to the BLS API.
-*`key`: Registration key provided by the BLS.
+* `url`: Base url to the BLS API.
+* `key`: Registration key provided by the BLS.
 
 Notes
 -----
@@ -35,12 +38,36 @@ catalog metadata available.
 type BLS
     url::AbstractString
     key::AbstractString
+    n_requests::Int16
+    t_created::DateTime
 end
 function BLS(url=DEFAULT_API_URL; key="")
-    BLS(url, key)
+    n_requests = 0
+    t_created = now()
+    BLS(url, key, n_requests, t_created)
 end
 api_url(b::BLS) = b.url
 api_key(b::BLS) = b.key
+api_version(b::BLS) = 1 + !isempty(api_key(b))
+requests_made(b::BLS) = b.n_requests
+requests_remaining(b::BLS) = LIMIT_DAILY_QUERY[api_version(b)] - requests_made(b)
+function increment_requests(b::BLS)
+    # Reset request if we are in a new day!
+    if Dates.day(now()) ≠ Dates.day(b.t_created)
+        b.t_created = now()
+        b.n_requests = 0
+    end
+
+    b.n_requests += 1
+end
+
+function Base.show(io::IO, b::BLS)
+    @printf io "BLS API v%d Connection\n"   api_version(b)
+    @printf io "\turl: %s\n"                api_url(b)
+    @printf io "\tkey: %s\n"                api_key(b)
+    @printf io "\trequests made (this cxn): %d\n"      requests_made(b)
+    @printf io "\trequests remaining (this cxn): %d\n" requests_remaining(b)
+end
 
 # Output from `get_data`
 """
@@ -95,19 +122,25 @@ Notes
 The BLS truncates any requests for data for a period longer than 10 years.
 """
 function get_data{T<:AbstractString}(b::BLS, series::T;
-               startyear::Int=Dates.year(now())-9,
-               endyear::Int=Dates.year(now()),
-               catalog::Bool=false)
+               startyear::Int = Dates.year(now()) - LIMIT_YEARS_PER_QUERY[api_version(b)]-1,
+               endyear::Int = Dates.year(now()),
+               catalog::Bool = false)
     return get_data(b, [series]; startyear=startyear, endyear=endyear, catalog=catalog)[1]
 end
 function get_data{T<:AbstractString}(b::BLS, series::Array{T, 1};
-               startyear::Int=Dates.year(now())-9,
-               endyear::Int=Dates.year(now()),
-               catalog::Bool=false)
+               startyear::Int = Dates.year(now()) - LIMIT_YEARS_PER_QUERY[api_version(b)]-1,
+               endyear::Int = Dates.year(now()),
+               catalog::Bool = false)
+
+    # Ensure requests remaining
+    if requests_remaining(b) <= 0
+        warn("No queries remaining today. Try again tomorrow.")
+        return [EMPTY_RESPONSE() for i in 1:n_series]
+    end
 
     n_series = length(series)
 
-    # Setup payload.
+    # Setup payload
     headers = Dict("Content-Type" => "application/json")
     json    = Dict("seriesid"     => series,
                    "startyear"    => startyear,
@@ -123,6 +156,7 @@ function get_data{T<:AbstractString}(b::BLS, series::Array{T, 1};
 
     # Submit POST request to BLS
     response = post(url; json=json, headers=headers)
+    increment_requests(b)
     response_json = Requests.json(response)
 
     # Response okay?
