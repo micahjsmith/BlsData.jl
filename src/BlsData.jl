@@ -110,7 +110,7 @@ A time series with metadata returned from a `get_data` call.
 Prefer to access fields with
 ```
 id(s::BlsSeries)
-data(s::BlsSeries)
+series(s::BlsSeries)
 catalog(s::BlsSeries)
 ```
 """
@@ -121,8 +121,15 @@ type BlsSeries
 end
 EMPTY_RESPONSE() = BlsSeries("",DataFrame(),[""])
 id(s::BlsSeries)      = s.id
-data(s::BlsSeries)    = s.df
+series(s::BlsSeries)    = s.df
 catalog(s::BlsSeries) = s.catalog
+
+function Base.show(io::IO, s::BlsSeries)
+    @printf io "BlsSeries\n"
+    @printf io "\tid: %s\n" id(s)
+    @printf io "\tseries: %dx%d DataFrame with columns %s\n" size(series(s))...  names(series(s)) 
+    @printf io "\tcatalog: %s\n" join(catalog(s), ". ")
+end
 
 """
 ```
@@ -157,15 +164,60 @@ The BLS truncates any requests for data for a period longer than 20 years (or 10
 without a registration key).
 """
 function get_data{T<:AbstractString}(b::Bls, series::T;
-               startyear::Int = Dates.year(now()) - LIMIT_YEARS_PER_QUERY[api_version(b)]-1,
+               startyear::Int = Dates.year(now()) - LIMIT_YEARS_PER_QUERY[api_version(b)] + 1,
                endyear::Int = Dates.year(now()),
                catalog::Bool = false)
     return get_data(b, [series]; startyear=startyear, endyear=endyear, catalog=catalog)[1]
 end
 function get_data{T<:AbstractString}(b::Bls, series::Array{T, 1};
-               startyear::Int = Dates.year(now()) - LIMIT_YEARS_PER_QUERY[api_version(b)]-1,
+               startyear::Int = Dates.year(now()) - LIMIT_YEARS_PER_QUERY[api_version(b)] + 1,
                endyear::Int = Dates.year(now()),
                catalog::Bool = false)
+
+    # Make multiple requests for year range greater than limit
+    limit = LIMIT_YEARS_PER_QUERY[api_version(b)]
+    nrequests = div(endyear-startyear, limit) + 1
+    data = []
+    for i=1:nrequests
+        t0 = startyear + limit * i - limit
+        t1 = startyear + limit * i - 1
+        if t1 > endyear
+            t1 = endyear
+        end
+        result = _get_data(b, series, t0, t1, catalog)
+        if isempty(data)
+            data = result
+        else
+            append_result!(data, result)
+        end
+
+    end
+    return data
+end
+
+# Append data frame and catalog information for each series.
+function append_result!(data, result)
+    for i=1:length(result)
+        @assert id(result[i])==id(data[i])
+        append!(series(data[i]), series(result[i]))
+
+        # Add non-empty catalog strings
+        for line in catalog(result[i])
+            if !isempty(line)
+                push!(catalog(data[i]), line)
+            end
+        end
+    end
+end
+
+# Worker method for a single request
+function _get_data{T<:AbstractString}(b::Bls, series::Array{T,1}, 
+               startyear::Int, endyear::Int, catalog::Bool)
+    println("b: ", b)
+    println("series: ", series)
+    println("startyear: ", startyear)
+    println("endyear: ", endyear)
+    println("catalog: ", catalog)
 
     # Ensure requests remaining
     if requests_remaining(b) <= 0
@@ -176,15 +228,13 @@ function get_data{T<:AbstractString}(b::Bls, series::Array{T, 1};
     n_series = length(series)
 
     # Setup payload
+    url     = api_url(b);
     headers = Dict("Content-Type" => "application/json")
     json    = Dict("seriesid"     => series,
                    "startyear"    => startyear,
                    "endyear"      => endyear,
                    "catalog"      => catalog)
-
-    url     = api_url(b);
     key     = api_key(b);
-
     if !isempty(key)
         json["registrationKey"] = key
     end
@@ -196,7 +246,7 @@ function get_data{T<:AbstractString}(b::Bls, series::Array{T, 1};
 
     # Response okay?
     if response_json["status"] ≠ BLS_RESPONSE_SUCCESS
-        warn("Request failed with message '", response_json["status"], "'")
+        warn("Request to BLS failed with message '", response_json["status"], "'")
 
         # Return empty response for each series
         return [EMPTY_RESPONSE() for i in 1:n_series]
@@ -227,6 +277,9 @@ function get_data{T<:AbstractString}(b::Bls, series::Array{T, 1};
         dates = flipdim([x[1] for x in data],1)
         values = flipdim([x[2] for x in data],1)
         df = DataFrame(date=dates, value=values)
+
+        # Data may not be returned in order, for some reason.
+        sort!(df)
 
         out[i] = BlsSeries(seriesID, df, catalog)
     end
