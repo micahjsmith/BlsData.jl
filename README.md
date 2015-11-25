@@ -19,12 +19,6 @@ one_series_catalog = get_data(b, "
 multiple_series = get_data(b, ["LNS11000000", "PRS85006092"])
 ```
 
-```
-using BlsData
-b = BLS(key="MY API KEY")
-data = get_data(b, "PRS85006092"; catalog=true)
-```
-
 ## Setup
 
 Simply run
@@ -37,8 +31,7 @@ julia> Pkg.clone("https://github.com/micahjsmith/BlsData.jl.git")
 ### The `Bls` type
 The `Bls` type represents a connection to the BLS API.
 
-Look for a registration key in the file `~/.blsdatarc`, or will omit the
-registration key otherwise.
+Looks for a registration key in the file `~/.blsdatarc`, or omits the registration key otherwise.
 ```
 b = Bls()
 ```
@@ -64,7 +57,6 @@ only and would not include those made in a distinct Julia session.
 ### The `BlsSeries` type
 The `BlsSeries` type contains the data in a query response.
 
-Get fields.
 ```
 id(s::BlsSeries)                         # Returns AbstractString
 series(s::BlsSeries)                     # Returns DataFrame
@@ -80,7 +72,6 @@ get_data{T<:AbstractString}(b::Bls, series::Union{T,Array{T,1}};
                catalog::Bool  = false)
 ```
 
-Argument detail.
 * `b`: A Bls connection
 * `series`: A string, or array of strings, identifying the time series
 * `startyear`: A four-digit year identifying the start of the data request
@@ -94,3 +85,17 @@ The BLS mnemonics are somewhat obscure. You can attempt to build them programmat
 consulting [this page](http://www.bls.gov/help/hlpforma.htm).
 
 ## Notes
+The BLS API provides the following limits on requests:
+
+|                        | v2 (registered) | v1 (unregistered) |
+| ---                    | ---             | ---               |
+| Daily query limit      | 500             | 25                |
+| Years per query limit  | 20              | 10                |
+| Series per query limit | 50              | 25                |
+
+`BlsData.jl` addresses these limits as follows:
+- track daily query limit for reference
+- make multiple requests under the hood, and concatenate results, for date ranges longer
+  than limit
+- make multiple requests under the hood, and concatenate results, for lists of series longer
+  than limit (TO BE IMPLEMENTED)
