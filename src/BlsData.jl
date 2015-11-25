@@ -134,11 +134,11 @@ end
 """
 ```
 get_data{T<:AbstractString}(b::Bls, series::Union{T,Array{T,1}};
-               startyear::Int = Dates.year(now()) - QUERY_LIMIT,
+               startyear::Int = Dates.year(now()) - QUERY_LIMIT + 1,
                endyear::Int   = Dates.year(now()),
                catalog::Bool  = false)
 ```
-Request one or multiple series from the BLS API.
+Request one or multiple series using the BLS API.
 
 Arguments
 ---------
@@ -150,12 +150,7 @@ Arguments
 
 Returns
 -------
-An object, or array of objects, of type BlsSeries
-
-Notes
------
-The BLS truncates any requests for data for a period longer than 20 years (or 10 years
-without a registration key).
+An object, or array of objects, of type BlsSeries.
 """
 function get_data{T<:AbstractString}(b::Bls, series::Union{T, Array{T, 1}};
                startyear::Int = typemin(Int),
