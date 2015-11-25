@@ -133,16 +133,10 @@ end
 
 """
 ```
-get_data{T<:AbstractString}(b::Bls, series::T;
-               startyear::Int=Dates.year(now())-9,
-               endyear::Int=Dates.year(now()),
-               catalog::Bool=false)
-```
-```
-get_data{T<:AbstractString}(b::Bls, series::Array{T,1};
-               startyear::Int=Dates.year(now())-9,
-               endyear::Int=Dates.year(now()),
-               catalog::Bool=false)
+get_data{T<:AbstractString}(b::Bls, series::Union{T,Array{T,1}};
+               startyear::Int = Dates.year(now()) - QUERY_LIMIT,
+               endyear::Int   = Dates.year(now()),
+               catalog::Bool  = false)
 ```
 Request one or multiple series from the BLS API.
 
@@ -163,16 +157,23 @@ Notes
 The BLS truncates any requests for data for a period longer than 20 years (or 10 years
 without a registration key).
 """
-function get_data{T<:AbstractString}(b::Bls, series::T;
-               startyear::Int = Dates.year(now()) - LIMIT_YEARS_PER_QUERY[api_version(b)] + 1,
-               endyear::Int = Dates.year(now()),
-               catalog::Bool = false)
-    return get_data(b, [series]; startyear=startyear, endyear=endyear, catalog=catalog)[1]
-end
-function get_data{T<:AbstractString}(b::Bls, series::Array{T, 1};
-               startyear::Int = Dates.year(now()) - LIMIT_YEARS_PER_QUERY[api_version(b)] + 1,
-               endyear::Int = Dates.year(now()),
-               catalog::Bool = false)
+function get_data{T<:AbstractString}(b::Bls, series::Union{T, Array{T, 1}};
+               startyear::Int = typemin(Int),
+               endyear::Int   = typemin(Int),
+               catalog::Bool  = false)
+
+    # Resolve default and user-specified date ranges
+    if startyear == endyear == typemin(Int)
+        endyear = Dates.year(now())
+        startyear = endyear - LIMIT_YEARS_PER_QUERY[api_version(b)] + 1
+    elseif startyear == typemin(Int) && endyear ≠ typemin(Int)
+        startyear = endyear - LIMIT_YEARS_PER_QUERY[api_version(b)] + 1
+    elseif startyear ≠ typemin(Int) && endyear == typemin(Int)
+        endyear = startyear + LIMIT_YEARS_PER_QUERY[api_version(b)] - 1
+    end
+    @assert endyear > startyear
+
+    series = vcat(series)
 
     # Make multiple requests for year range greater than limit
     limit = LIMIT_YEARS_PER_QUERY[api_version(b)]
@@ -192,7 +193,12 @@ function get_data{T<:AbstractString}(b::Bls, series::Array{T, 1};
         end
 
     end
-    return data
+
+    if length(data) == 1
+        return data[1]
+    else
+        return data
+    end
 end
 
 # Append data frame and catalog information for each series.
@@ -213,11 +219,6 @@ end
 # Worker method for a single request
 function _get_data{T<:AbstractString}(b::Bls, series::Array{T,1}, 
                startyear::Int, endyear::Int, catalog::Bool)
-    println("b: ", b)
-    println("series: ", series)
-    println("startyear: ", startyear)
-    println("endyear: ", endyear)
-    println("catalog: ", catalog)
 
     # Ensure requests remaining
     if requests_remaining(b) <= 0
