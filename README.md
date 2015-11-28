@@ -1,4 +1,4 @@
-# BLS
+# BlsData
 [![Build Status](https://travis-ci.org/micahjsmith/BlsData.jl.svg?branch=master)](https://travis-ci.org/micahjsmith/BlsData.jl)
 
 A basic Julia interface to pull data from the Bureau of Labor Statistics using
@@ -15,7 +15,7 @@ Basic usage:
 using BlsData
 b = BLS()
 one_series = get_data(b, "LNS11000000")
-one_series_catalog = get_data(b, "
+one_series_catalog = get_data(b, "LNS11000000"; catalog=true)
 multiple_series = get_data(b, ["LNS11000000", "PRS85006092"])
 ```
 
@@ -23,7 +23,7 @@ multiple_series = get_data(b, ["LNS11000000", "PRS85006092"])
 
 Simply run
 ```julia
-julia> Pkg.clone("https://github.com/micahjsmith/BlsData.jl.git")
+julia> Pkg.add("BlsData")
 ```
 
 ## Functionality
