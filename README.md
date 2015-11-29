@@ -13,7 +13,7 @@ of the increased daily query limit and other features.
 Basic usage:
 ```
 using BlsData
-b = BLS()
+b = Bls()
 one_series = get_data(b, "LNS11000000")
 one_series_catalog = get_data(b, "LNS11000000"; catalog=true)
 multiple_series = get_data(b, ["LNS11000000", "PRS85006092"])
@@ -58,9 +58,9 @@ only and would not include those made in a distinct Julia session.
 The `BlsSeries` type contains the data in a query response.
 
 ```
-id(s::BlsSeries)                         # Returns AbstractString
-series(s::BlsSeries)                     # Returns DataFrame
-catalog(s::BlsSeries)                    # Returns one or array of AbstractString
+id(s::BlsSeries)                         # Get series ID
+series(s::BlsSeries)                     # Get data as DataFrame
+catalog(s::BlsSeries)                    # Get joined catalog strings
 ```
 
 ### Query data
