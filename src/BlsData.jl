@@ -27,9 +27,22 @@ const BLS_STATUS_CODE_REASONS    = Dict(400 => "Your request did not follow the 
 const LIMIT_DAILY_QUERY          = [25, 500]
 const LIMIT_SERIES_PER_QUERY     = [25, 50]
 const LIMIT_YEARS_PER_QUERY      = [10, 20]
-const LIMIT_YEARS_PER_QUERY_ADJ  = LIMIT_DAILY_QUERY .- 1
 
-const DEBUG                      = false
+# Debugging info
+const DEBUG                      = true
+function log_error(url, payload, headers, response)
+    try
+        open(joinpath(homedir(), ".blsdatajl.log"), "a") do f
+            println(f, "--------")
+            println(f, "Request")
+            println(f, url)
+            println(f, JSON.json(payload))
+            println(f, headers)
+            println(f, "Response")
+            println(f, Requests.text(response))
+        end
+    end
+end
 
 """
 A connection to the BLS API.
@@ -83,7 +96,6 @@ function Bls(key="")
             end
         catch err
         end
-
     end
 
     url = DEFAULT_API_URL
@@ -145,10 +157,14 @@ end
 
 EMPTY_RESPONSE() = BlsSeries("",DataFrame(),"")
 function Base.isempty(s::BlsSeries)
-    return id(s) == "" &&
-        series(s) == DataFrame() &&
-        catalog(s) == ""
+    for name in fieldnames(s)
+        if !isempty(getfield(s, name))
+            return false
+        end
+    end
+    return true
 end
+
 
 include("get_data.jl")
 end # module

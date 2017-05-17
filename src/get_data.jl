@@ -27,16 +27,18 @@ function get_data{T<:AbstractString}(b::Bls, series::Array{T, 1};
 
     # Resolve default and user-specified date ranges
     if startyear == endyear == typemin(Int)
+        # If neither startyear nor endyear is specified
         endyear = Dates.year(now())
-        startyear = endyear - LIMIT_YEARS_PER_QUERY_ADJ[api_version(b)]
+        startyear = endyear - (LIMIT_YEARS_PER_QUERY[api_version(b)]-1)
     elseif startyear == typemin(Int) && endyear ≠ typemin(Int)
-        startyear = endyear - LIMIT_YEARS_PER_QUERY_ADJ[api_version(b)]
+        # If only endyear is specified
+        startyear = endyear - (LIMIT_YEARS_PER_QUERY[api_version(b)]-1)
     elseif startyear ≠ typemin(Int) && endyear == typemin(Int)
-        endyear = startyear + LIMIT_YEARS_PER_QUERY_ADJ[api_version(b)]
+        # If only startyear is specified
+        endyear = startyear + (LIMIT_YEARS_PER_QUERY[api_version(b)]-1)
     end
     @assert endyear > startyear
-
-    series = vcat(series)
+    @assert startyear ≤ Dates.year(now())
 
     # Make multiple requests for year range greater than limit
     limit = LIMIT_YEARS_PER_QUERY[api_version(b)]
@@ -60,6 +62,12 @@ function get_data{T<:AbstractString}(b::Bls, series::Array{T, 1};
             t1 = endyear
         end
         result = _get_data(b, series, t0, t1, catalog)
+
+        # Check that we got a non-empty result
+        # TODO this check fails if series metadata has been added to the result
+        if isempty(result)
+            continue
+        end
 
         # Append to existing results
         if isempty(data)
@@ -87,7 +95,14 @@ function append_result!(data, result)
         end
 
         @assert id(result[i])==id(data[i])
-        append!(series(data[i]), series(result[i]))
+        
+        # It's possible that the first df, from 'data', has no rows but differently typed
+        # columns from the second df. In this case, we ditch the first df entirely.
+        if nrow(series(data[i])) > 0
+            append!(series(data[i]), series(result[i]))
+        else
+            data[i].df = series(result[i]) 
+        end
 
         # Add non-empty catalog strings
         if !isempty(catalog(result[i]))
@@ -105,17 +120,17 @@ function _get_data{T<:AbstractString}(b::Bls, series::Array{T,1},
     # Setup payload
     url     = api_url(b);
     headers = Dict("Content-Type" => "application/json")
-    json    = Dict("seriesid"     => series,
+    payload = Dict("seriesid"     => series,
                    "startyear"    => startyear,
                    "endyear"      => endyear,
                    "catalog"      => catalog)
     key     = api_key(b);
     if !isempty(key)
-        json["registrationKey"] = key
+        payload["registrationKey"] = key
     end
 
     # Submit POST request to BLS
-    response = Requests.post(url; json=json, headers=headers)
+    response = Requests.post(url; json=payload, headers=headers)
 
     # Check if request succeeded
     status = response.status
@@ -133,19 +148,13 @@ function _get_data{T<:AbstractString}(b::Bls, series::Array{T,1},
         reason_http = HttpCommon.STATUS_CODES[status]
         error("API request failed with status $(status) ($(reason_http)): $(reason)")
     else
-        try
-            if DEBUG
-                open(joinpath(homedir(), ".blsdatajl.log"), "a") do f
-                    println(f, Requests.text(response))
-                end
-            end
-        finally
-            error("API request failed unexpectedly with status $(status)")
-        end
+        if DEBUG log_error(url, payload, headers, response) end
+        error("API request failed unexpectedly with status $(status)")
     end
 
     # Response okay?
     if response_json["status"] ≠ BLS_RESPONSE_SUCCESS
+        if DEBUG log_error(url, payload, headers, response) end
         status = response_json["status"]
         message = if haskey(response_json, "message")
             join(hcat(response_json["message"]), ";")
@@ -177,8 +186,8 @@ function _get_data{T<:AbstractString}(b::Bls, series::Array{T,1},
         catalog_out = vcat(catalog_out)
         catalog_out = join(catalog_out, ". ")
 
-        data = map(parse_period_dict, series["data"])
-        dates = flipdim([x[1] for x in data],1)
+        data   = map(parse_period_dict, series["data"])
+        dates  = flipdim([x[1] for x in data],1)
         values = flipdim([x[2] for x in data],1)
         df = DataFrame(date=dates, value=values)
 
