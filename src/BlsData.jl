@@ -19,6 +19,7 @@ const BLS_RESPONSE_CATALOG_FAIL2 = "catalog has been disabled"
 const LIMIT_DAILY_QUERY          = [25, 500]
 const LIMIT_SERIES_PER_QUERY     = [25, 50]
 const LIMIT_YEARS_PER_QUERY      = [10, 20]
+const LIMIT_YEARS_PER_QUERY_ADJ  = LIMIT_DAILY_QUERY .- 1
 
 """
 A connection to the BLS API.

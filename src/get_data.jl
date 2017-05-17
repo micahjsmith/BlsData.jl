@@ -1,37 +1,38 @@
 """
-```
-get_data{T<:AbstractString}(b::Bls, series::Union{T,Array{T,1}};
-               startyear::Int = Dates.year(now()) - QUERY_LIMIT + 1,
-               endyear::Int   = Dates.year(now()),
-               catalog::Bool  = false)
-```
+`get_data(b, series [, startyear, endyear, catalog])`
 Request one or multiple series using the BLS API.
 
 Arguments
 ---------
-* `b`: A Bls connection
+* `b`: A `Bls` connection
 * `series`: A string, or array of strings, identifying the time series
-* `startyear`: A four-digit year identifying the start of the data request
-* `endyear`: A four-digit year identifying the end of the data request
-* `catalog`: Whether to return any available metadata about the series
+* `startyear`: A four-digit year identifying the start of the data request. Defaults to
+    9 or 19 years before `endyear`, depending on the API version used.
+* `endyear`: A four-digit year identifying the end of the data request. Defaults to
+    9 or 19 years after `endyear`, depending on the API version used; or, this year, if
+    neither `startyear` nor `endyear` is provided.
+* `catalog`: Whether to return any available metadata about the series. Defaults to `false`.
 
 Returns
 -------
-An object, or array of objects, of type BlsSeries.
+A `BlsSeries`, or an array of `BlsSeries`.
 """
-function get_data{T<:AbstractString}(b::Bls, series::Union{T, Array{T, 1}};
-               startyear::Int = typemin(Int),
-               endyear::Int   = typemin(Int),
-               catalog::Bool  = false)
+function get_data(b::Bls, series::AbstractString; kwargs...)
+   return get_data(b, [series]; kwargs...)
+end
+function get_data{T<:AbstractString}(b::Bls, series::Array{T, 1};
+                                     startyear::Int = typemin(Int),
+                                     endyear::Int   = typemin(Int),
+                                     catalog::Bool  = false)
 
     # Resolve default and user-specified date ranges
     if startyear == endyear == typemin(Int)
         endyear = Dates.year(now())
-        startyear = endyear - LIMIT_YEARS_PER_QUERY[api_version(b)] + 1
+        startyear = endyear - LIMIT_YEARS_PER_QUERY_ADJ[api_version(b)]
     elseif startyear == typemin(Int) && endyear ≠ typemin(Int)
-        startyear = endyear - LIMIT_YEARS_PER_QUERY[api_version(b)] + 1
+        startyear = endyear - LIMIT_YEARS_PER_QUERY_ADJ[api_version(b)]
     elseif startyear ≠ typemin(Int) && endyear == typemin(Int)
-        endyear = startyear + LIMIT_YEARS_PER_QUERY[api_version(b)] - 1
+        endyear = startyear + LIMIT_YEARS_PER_QUERY_ADJ[api_version(b)]
     end
     @assert endyear > startyear
 
@@ -97,7 +98,7 @@ end
 
 # Worker method for a single request
 function _get_data{T<:AbstractString}(b::Bls, series::Array{T,1}, 
-               startyear::Int, endyear::Int, catalog::Bool)
+                                      startyear::Int, endyear::Int, catalog::Bool)
 
     n_series = length(series)
 
