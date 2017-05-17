@@ -2,10 +2,10 @@
 [![Build Status](https://travis-ci.org/micahjsmith/BlsData.jl.svg?branch=master)](https://travis-ci.org/micahjsmith/BlsData.jl)
 
 A basic Julia interface to pull data from the Bureau of Labor Statistics using
-their Public API [here](http://www.bls.gov/developers/home.htm).
+their Public API [here](https://www.bls.gov/developers/home.htm).
 
 Register a Public Data API account on the BLS website
-[here](http://data.bls.gov/registrationEngine/) to receive an API key. Then, take advantage
+[here](https://data.bls.gov/registrationEngine/) to receive an API key. Then, take advantage
 of the increased daily query limit and other features.
 
 ## Usage
@@ -82,7 +82,7 @@ Returns an object, or array of objects, of type `BlsSeries`.
 
 ## Finding data series
 The BLS mnemonics are somewhat obscure. You can attempt to build them programmatically by
-consulting [this page](http://www.bls.gov/help/hlpforma.htm).
+consulting [this page](https://www.bls.gov/help/hlpforma.htm).
 
 ## Notes
 The BLS API provides the following limits on requests:

@@ -11,7 +11,7 @@ export Bls, api_url, set_api_url!, api_key, api_version, requests_made, requests
 export BlsSeries, id, series, catalog
 export get_data
 
-const DEFAULT_API_URL            = "http://api.bls.gov/publicAPI/v2/timeseries/data/"
+const DEFAULT_API_URL            = "https://api.bls.gov/publicAPI/v2/timeseries/data/"
 const API_KEY_LENGTH             = 32
 const BLS_RESPONSE_SUCCESS       = "REQUEST_SUCCEEDED"
 const BLS_RESPONSE_CATALOG_FAIL1 = "unable to get catalog data"
