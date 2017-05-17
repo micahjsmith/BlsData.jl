@@ -146,8 +146,13 @@ function _get_data{T<:AbstractString}(b::Bls, series::Array{T,1},
 
     # Response okay?
     if response_json["status"] ≠ BLS_RESPONSE_SUCCESS
-        warn("API request failed with message '", response_json["status"], "'")
-        warn("Returning empty data series.")
+        status = response_json["status"]
+        message = if haskey(response_json, "message")
+            join(hcat(response_json["message"]), ";")
+        else
+            "<no message returned>"
+        end
+        warn("API request failed with status $(status): $(message)")
 
         # Return empty response for each series
         return [EMPTY_RESPONSE() for i in 1:n_series]
