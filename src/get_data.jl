@@ -115,13 +115,39 @@ function _get_data{T<:AbstractString}(b::Bls, series::Array{T,1},
     end
 
     # Submit POST request to BLS
-    response = post(url; json=json, headers=headers)
-    increment_requests(b)
-    response_json = Requests.json(response)
+    response = Requests.post(url; json=json, headers=headers)
+
+    # Check if request succeeded
+    status = response.status
+    if response.status == 200
+        response_json = Requests.json(response)
+        increment_requests(b)
+    elseif response.status == 202
+        # A 202 status code can be returned to note that "Your request is processing.". It's
+        # unclear how BLS treats this, so we just try to process anyway. Exceptions are
+        # expected.
+        response_json = Requests.json(response)
+        increment_requests(b)
+    elseif haskey(BLS_STATUS_CODE_REASONS, response.status)
+        reason = BLS_STATUS_CODE_REASONS[status]
+        reason_http = HttpCommon.STATUS_CODES[status]
+        error("API request failed with status $(status) ($(reason_http)): $(reason)")
+    else
+        try
+            if DEBUG
+                open(joinpath(homedir(), ".blsdatajl.log"), "a") do f
+                    println(f, Requests.text(response))
+                end
+            end
+        finally
+            error("API request failed unexpectedly with status $(status)")
+        end
+    end
 
     # Response okay?
     if response_json["status"] ≠ BLS_RESPONSE_SUCCESS
-        warn("Request to BLS failed with message '", response_json["status"], "'")
+        warn("API request failed with message '", response_json["status"], "'")
+        warn("Returning empty data series.")
 
         # Return empty response for each series
         return [EMPTY_RESPONSE() for i in 1:n_series]

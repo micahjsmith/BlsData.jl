@@ -4,8 +4,8 @@ module BlsData
 
 using Requests
 using DataFrames
-import Requests: post
 import JSON
+import HttpCommon
 
 export Bls, api_url, set_api_url!, api_key, api_version, requests_made, requests_remaining
 export BlsSeries, id, series, catalog
@@ -16,10 +16,20 @@ const API_KEY_LENGTH             = 32
 const BLS_RESPONSE_SUCCESS       = "REQUEST_SUCCEEDED"
 const BLS_RESPONSE_CATALOG_FAIL1 = "unable to get catalog data"
 const BLS_RESPONSE_CATALOG_FAIL2 = "catalog has been disabled"
+
+# See https://www.bls.gov/developers/api_faqs.htm for status code reasons.
+const BLS_STATUS_CODE_REASONS    = Dict(400 => "Your request did not follow the correct syntax.",
+                                        401 => "You are not authorized to make this request.",
+                                        404 => "Your request was not found and/or does not exist.",
+                                        429 => "You have made too many requests.",
+                                        500 => "The server has encountered an unexpected condition, and the request cannot be completed.")
+
 const LIMIT_DAILY_QUERY          = [25, 500]
 const LIMIT_SERIES_PER_QUERY     = [25, 50]
 const LIMIT_YEARS_PER_QUERY      = [10, 20]
 const LIMIT_YEARS_PER_QUERY_ADJ  = LIMIT_DAILY_QUERY .- 1
+
+const DEBUG                      = false
 
 """
 A connection to the BLS API.
