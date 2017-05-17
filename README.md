@@ -27,7 +27,8 @@ julia> Pkg.add("BlsData")
 ### The `Bls` type
 The `Bls` type represents a connection to the BLS API.
 
-Looks for a registration key in the file `~/.blsdatarc`, or omits the registration key otherwise.
+Looks for a registration key in the file `~/.blsdatarc`, or omits the registration key
+otherwise.
 ```
 b = Bls()
 ```
@@ -39,12 +40,12 @@ b = Bls(key="0123456789abcdef0123456789abcdef")
 
 Get and set fields.
 ```
-api_url(b::Bls)                          # Get the base URL used to connect to the server
+get_api_url(b::Bls)                       # Get the base URL used to connect to the server
 set_api_url!(b::Bls, url::AbstractString) # Set the base URL used to connect to the server
-api_key(b::Bls)                          # Get the API key
-api_version(b::Bls)                      # Get the API version (v1 or v2) used
-requests_made(b::Bls)                    # Get the number of requests made today
-requests_remaining(b::Bls)               # Get the number of requests remaining today
+get_api_key(b::Bls)                       # Get the API key
+get_api_version(b::Bls)                   # Get the API version (v1 or v2) used
+requests_made(b::Bls)                     # Get the number of requests made today
+requests_remaining(b::Bls)                # Get the number of requests remaining today
 ```
 
 Note that the requests made/remaining are calculated based on the lifetime of this object
@@ -53,10 +54,11 @@ only and would not include those made in a distinct Julia session.
 ### The `BlsSeries` type
 The `BlsSeries` type contains the data in a query response.
 
+For a series `s`, access fields with
 ```
-id(s::BlsSeries)                         # Get series ID
-series(s::BlsSeries)                     # Get data as DataFrame
-catalog(s::BlsSeries)                    # Get joined catalog strings
+s.id                                     # series ID
+s.data                                   # DataFrame of data
+s.catalog                                # catalog metadata
 ```
 
 ### Query data
@@ -92,6 +94,6 @@ The BLS API provides the following limits on requests:
 `BlsData.jl` addresses these limits as follows:
 - track daily query limit for reference
 - make multiple requests under the hood, and concatenate results, for date ranges longer
-  than limit
-- [NOT IMPLEMENTED] make multiple requests under the hood, and concatenate results, for lists of series longer
-  than limit
+    than limit
+- [NOT IMPLEMENTED] make multiple requests under the hood, and concatenate results, for
+    lists of series longer than limit

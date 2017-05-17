@@ -29,19 +29,19 @@ function get_data{T<:AbstractString}(b::Bls, series::Array{T, 1};
     if startyear == endyear == typemin(Int)
         # If neither startyear nor endyear is specified
         endyear = Dates.year(now())
-        startyear = endyear - (LIMIT_YEARS_PER_QUERY[api_version(b)]-1)
+        startyear = endyear - (LIMIT_YEARS_PER_QUERY[get_api_version(b)]-1)
     elseif startyear == typemin(Int) && endyear ≠ typemin(Int)
         # If only endyear is specified
-        startyear = endyear - (LIMIT_YEARS_PER_QUERY[api_version(b)]-1)
+        startyear = endyear - (LIMIT_YEARS_PER_QUERY[get_api_version(b)]-1)
     elseif startyear ≠ typemin(Int) && endyear == typemin(Int)
         # If only startyear is specified
-        endyear = startyear + (LIMIT_YEARS_PER_QUERY[api_version(b)]-1)
+        endyear = startyear + (LIMIT_YEARS_PER_QUERY[get_api_version(b)]-1)
     end
     @assert endyear > startyear
     @assert startyear ≤ Dates.year(now())
 
     # Make multiple requests for year range greater than limit
-    limit = LIMIT_YEARS_PER_QUERY[api_version(b)]
+    limit = LIMIT_YEARS_PER_QUERY[get_api_version(b)]
     nrequests = div(endyear-startyear, limit) + 1
     if nrequests > requests_remaining(b)
         warn("Insufficient number of requests remaining ", "(", nrequests, " needed ", 
@@ -94,19 +94,19 @@ function append_result!(data, result)
             continue
         end
 
-        @assert id(result[i])==id(data[i])
+        @assert result[i].id==data[i].id
         
         # It's possible that the first df, from 'data', has no rows but differently typed
         # columns from the second df. In this case, we ditch the first df entirely.
-        if nrow(series(data[i])) > 0
-            append!(series(data[i]), series(result[i]))
+        if nrow(data[i].data) > 0
+            append!(data[i].data, result[i].data)
         else
-            data[i].df = series(result[i]) 
+            data[i].data = result[i].data
         end
 
         # Add non-empty catalog strings
-        if !isempty(catalog(result[i]))
-            data[i].catalog = join(catalog(data[i]), ". ")
+        if !isempty(result[i].catalog)
+            data[i].catalog = join(data[i].catalog, ". ")
         end
     end
 end
@@ -118,13 +118,13 @@ function _get_data{T<:AbstractString}(b::Bls, series::Array{T,1},
     n_series = length(series)
 
     # Setup payload
-    url     = api_url(b);
+    url     = get_api_url(b);
     headers = Dict("Content-Type" => "application/json")
     payload = Dict("seriesid"     => series,
                    "startyear"    => startyear,
                    "endyear"      => endyear,
                    "catalog"      => catalog)
-    key     = api_key(b);
+    key     = get_api_key(b);
     if !isempty(key)
         payload["registrationKey"] = key
     end
@@ -136,13 +136,13 @@ function _get_data{T<:AbstractString}(b::Bls, series::Array{T,1},
     status = response.status
     if response.status == 200
         response_json = Requests.json(response)
-        increment_requests(b)
+        increment_requests!(b)
     elseif response.status == 202
         # A 202 status code can be returned to note that "Your request is processing.". It's
         # unclear how BLS treats this, so we just try to process anyway. Exceptions are
         # expected.
         response_json = Requests.json(response)
-        increment_requests(b)
+        increment_requests!(b)
     elseif haskey(BLS_STATUS_CODE_REASONS, response.status)
         reason = BLS_STATUS_CODE_REASONS[status]
         reason_http = HttpCommon.STATUS_CODES[status]

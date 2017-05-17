@@ -18,3 +18,11 @@ let
 
     nothing
 end
+
+let
+    # Test empty BlsSeries
+    empty_response = BlsData.EMPTY_RESPONSE()
+    @test isempty(empty_response)
+
+    nothing
+end

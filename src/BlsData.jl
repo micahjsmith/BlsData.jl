@@ -7,9 +7,14 @@ using DataFrames
 import JSON
 import HttpCommon
 
-export Bls, api_url, set_api_url!, api_key, api_version, requests_made, requests_remaining
-export BlsSeries, id, series, catalog
-export get_data
+export 
+    # Bls type
+    Bls, get_api_url, set_api_url!, get_api_key, get_api_version, requests_made, 
+        requests_remaining,
+    # BlsSeries type
+    BlsSeries,
+    # get data
+    get_data
 
 const DEFAULT_API_URL            = "https://api.bls.gov/publicAPI/v2/timeseries/data/"
 const API_KEY_LENGTH             = 32
@@ -104,14 +109,14 @@ function Bls(key="")
     Bls(url, key, n_requests, t_created)
 end
 
-api_url(b::Bls) = b.url
+get_api_url(b::Bls) = b.url
 set_api_url!(b::Bls, url::AbstractString) = setfield!(b, :url, url)
-api_key(b::Bls) = b.key
-api_version(b::Bls) = 1 + !isempty(api_key(b))
+get_api_key(b::Bls) = b.key
+get_api_version(b::Bls) = 1 + !isempty(get_api_key(b))
 requests_made(b::Bls) = b.n_requests
-requests_remaining(b::Bls) = LIMIT_DAILY_QUERY[api_version(b)] - requests_made(b)
+requests_remaining(b::Bls) = LIMIT_DAILY_QUERY[get_api_version(b)] - requests_made(b)
 
-function increment_requests(b::Bls)
+function increment_requests!(b::Bls)
     # Reset request if we are in a new day!
     if Dates.day(now()) ≠ Dates.day(b.t_created)
         b.t_created = now()
@@ -122,9 +127,9 @@ function increment_requests(b::Bls)
 end
 
 function Base.show(io::IO, b::Bls)
-    @printf io "BLS API v%d Connection\n"   api_version(b)
-    @printf io "\turl: %s\n"                api_url(b)
-    @printf io "\tkey: %s\n"                api_key(b)
+    @printf io "BLS API v%d Connection\n"   get_api_version(b)
+    @printf io "\turl: %s\n"                get_api_url(b)
+    @printf io "\tkey: %s\n"                get_api_key(b)
     @printf io "\trequests made (this session): %d\n"       requests_made(b)
     @printf io "\trequests remaining (this session): ≤%d\n" requests_remaining(b)
 end
@@ -132,27 +137,24 @@ end
 """
 A time series with metadata returned from a `get_data` call.
 
-Prefer to access fields with
+For a series `s`, access fields with
 ```
-id(s::BlsSeries)
-series(s::BlsSeries)
-catalog(s::BlsSeries)
+s.id
+s.data
+s.catalog
 ```
 """
 type BlsSeries
     id::AbstractString
-    df::DataFrame
+    data::DataFrame
     catalog::AbstractString
 end
-id(s::BlsSeries)      = s.id
-series(s::BlsSeries)  = s.df
-catalog(s::BlsSeries) = s.catalog
 
 function Base.show(io::IO, s::BlsSeries)
     @printf io "BlsSeries\n"
-    @printf io "\tid: %s\n" id(s)
-    @printf io "\tseries: %dx%d DataFrame with columns %s\n" size(series(s))...  names(series(s)) 
-    @printf io "\tcatalog: %s\n" catalog(s)
+    @printf io "\tid: %s\n" s.id
+    @printf io "\tseries: %dx%d DataFrame with columns %s\n" size(s.data)...  names(s.data) 
+    @printf io "\tcatalog: %s\n" s.catalog
 end
 
 EMPTY_RESPONSE() = BlsSeries("",DataFrame(),"")
@@ -165,6 +167,16 @@ function Base.isempty(s::BlsSeries)
     return true
 end
 
+# deprecated
+export 
+    api_url, api_key, api_version,
+    id, series, catalog
+@deprecate api_url(b::Bls) get_api_url(b)
+@deprecate api_key(b::Bls) get_api_key(b)
+@deprecate api_version(b::Bls) get_api_version(b)
+@deprecate id(s::BlsSeries) getfield(s, :id)
+@deprecate series(s::BlsSeries) getfield(s, :data)
+@deprecate catalog(s::BlsSeries) getfield(s, :catalog)
 
 include("get_data.jl")
 end # module
