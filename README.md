@@ -10,18 +10,14 @@ of the increased daily query limit and other features.
 
 ## Usage
 
-Basic usage:
 ```
 using BlsData
 b = Bls()
 one_series = get_data(b, "LNS11000000")
-one_series_catalog = get_data(b, "LNS11000000"; catalog=true)
-multiple_series = get_data(b, ["LNS11000000", "PRS85006092"])
 ```
 
 ## Setup
 
-Simply run
 ```julia
 julia> Pkg.add("BlsData")
 ```
@@ -38,13 +34,13 @@ b = Bls()
 
 Specify a registration key directly.
 ```
-b = Bls(key="abc123")
+b = Bls(key="0123456789abcdef0123456789abcdef")
 ```
 
 Get and set fields.
 ```
 api_url(b::Bls)                          # Get the base URL used to connect to the server
-set_api_url(b::Bls, url::AbstractString) # Set the base URL used to connect to the server
+set_api_url!(b::Bls, url::AbstractString) # Set the base URL used to connect to the server
 api_key(b::Bls)                          # Get the API key
 api_version(b::Bls)                      # Get the API version (v1 or v2) used
 requests_made(b::Bls)                    # Get the number of requests made today
@@ -66,19 +62,19 @@ catalog(s::BlsSeries)                    # Get joined catalog strings
 ### Query data
 Request one or multiple series from the BLS API.
 ```
-get_data{T<:AbstractString}(b::Bls, series::Union{T,Array{T,1}};
-               startyear::Int = Dates.year(now()) - QUERY_LIMIT + 1,
-               endyear::Int   = Dates.year(now()),
-               catalog::Bool  = false)
+get_data(b, series [; startyear, endyear, catalog])
 ```
 
-* `b`: A Bls connection
+* `b`: A `Bls` connection
 * `series`: A string, or array of strings, identifying the time series
-* `startyear`: A four-digit year identifying the start of the data request
-* `endyear`: A four-digit year identifying the end of the data request
-* `catalog`: Whether to return any available metadata about the series
+* `startyear`: A four-digit year identifying the start of the data request. Defaults to
+    9 or 19 years before `endyear`, depending on the API version used.
+* `endyear`: A four-digit year identifying the end of the data request. Defaults to
+    9 or 19 years after `endyear`, depending on the API version used; or, this year, if
+    neither `startyear` nor `endyear` is provided.
+* `catalog`: Whether to return any available metadata about the series. Defaults to `false`.
 
-Returns an object, or array of objects, of type `BlsSeries`.
+A `BlsSeries`, or an array of `BlsSeries`.
 
 ## Finding data series
 The BLS mnemonics are somewhat obscure. You can attempt to build them programmatically by
@@ -97,5 +93,5 @@ The BLS API provides the following limits on requests:
 - track daily query limit for reference
 - make multiple requests under the hood, and concatenate results, for date ranges longer
   than limit
-- make multiple requests under the hood, and concatenate results, for lists of series longer
-  than limit (TO BE IMPLEMENTED)
+- [NOT IMPLEMENTED] make multiple requests under the hood, and concatenate results, for lists of series longer
+  than limit

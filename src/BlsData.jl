@@ -46,7 +46,7 @@ Arguments
 Methods
 -------
 * `api_url(b::Bls)`: Get the base URL used to connect to the server
-* `set_api_url(b::Bls, url::AbstractString)`: Set the base URL used to connect to the server
+* `set_api_url!(b::Bls, url::AbstractString)`: Set the base URL used to connect to the server
 * `api_key(b::Bls)`: Get the API key
 * `api_version(b::Bls)`: Get the API version (v1 or v2) used
 * `requests_made(b::Bls)`: Get the number of requests made today
@@ -69,7 +69,7 @@ function Bls(key="")
     if isempty(key)
         try
             open(joinpath(homedir(),".blsdatarc"), "r") do f
-                key = readall(f)
+                key = readstring(f)
             end
             key = rstrip(key)
             @printf "API key loaded.\n"
@@ -91,12 +91,14 @@ function Bls(key="")
     t_created = now()
     Bls(url, key, n_requests, t_created)
 end
+
 api_url(b::Bls) = b.url
 set_api_url!(b::Bls, url::AbstractString) = setfield!(b, :url, url)
 api_key(b::Bls) = b.key
 api_version(b::Bls) = 1 + !isempty(api_key(b))
 requests_made(b::Bls) = b.n_requests
 requests_remaining(b::Bls) = LIMIT_DAILY_QUERY[api_version(b)] - requests_made(b)
+
 function increment_requests(b::Bls)
     # Reset request if we are in a new day!
     if Dates.day(now()) ≠ Dates.day(b.t_created)
@@ -111,8 +113,8 @@ function Base.show(io::IO, b::Bls)
     @printf io "BLS API v%d Connection\n"   api_version(b)
     @printf io "\turl: %s\n"                api_url(b)
     @printf io "\tkey: %s\n"                api_key(b)
-    @printf io "\trequests made (this connection): %d\n"      requests_made(b)
-    @printf io "\trequests remaining (this connection): %d\n" requests_remaining(b)
+    @printf io "\trequests made (this session): %d\n"       requests_made(b)
+    @printf io "\trequests remaining (this session): ≤%d\n" requests_remaining(b)
 end
 
 """

@@ -1,5 +1,5 @@
 """
-`get_data(b, series [, startyear, endyear, catalog])`
+`get_data(b, series [; startyear, endyear, catalog])`
 Request one or multiple series using the BLS API.
 
 Arguments
