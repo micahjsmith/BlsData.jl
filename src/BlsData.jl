@@ -6,6 +6,7 @@ using Requests
 using DataFrames
 import JSON
 import HttpCommon
+using Compat
 
 export 
     # Bls type
