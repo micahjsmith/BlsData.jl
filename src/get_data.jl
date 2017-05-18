@@ -28,7 +28,7 @@ function get_data{T<:AbstractString}(b::Bls, series::Array{T, 1};
     # Resolve default and user-specified date ranges
     if startyear == endyear == typemin(Int)
         # If neither startyear nor endyear is specified
-        endyear = Dates.year(now())
+        endyear = Int(Dates.year(now()))
         startyear = endyear - (LIMIT_YEARS_PER_QUERY[get_api_version(b)]-1)
     elseif startyear == typemin(Int) && endyear ≠ typemin(Int)
         # If only endyear is specified
@@ -38,7 +38,7 @@ function get_data{T<:AbstractString}(b::Bls, series::Array{T, 1};
         endyear = startyear + (LIMIT_YEARS_PER_QUERY[get_api_version(b)]-1)
     end
     @assert endyear > startyear
-    @assert startyear ≤ Dates.year(now())
+    @assert startyear ≤ Int(Dates.year(now()))
 
     # Make multiple requests for year range greater than limit
     limit = LIMIT_YEARS_PER_QUERY[get_api_version(b)]
