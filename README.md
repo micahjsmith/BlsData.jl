@@ -1,26 +1,44 @@
 # BlsData
-[![Build Status](https://travis-ci.org/micahjsmith/BlsData.jl.svg?branch=master)](https://travis-ci.org/micahjsmith/BlsData.jl)
 
-A basic Julia interface to pull data from the Bureau of Labor Statistics using
-their Public API [here](https://www.bls.gov/developers/home.htm).
+A third-party Julia library to pull data from
+the [Bureau of Labor Statistics](https://www.bls.gov/data/) (BLS).
 
-Register a Public Data API account on the BLS website
-[here](https://data.bls.gov/registrationEngine/) to receive an API key. Then, take advantage
-of the increased daily query limit and other features.
-
-## Usage
-
-```
-using BlsData
-b = Bls()
-one_series = get_data(b, "LNS11000000")
-```
+|                         | Does this thing work?                                             |
+| ----------------------- | :---------------------------------------------------------------- |
+| **Documentation**       | \<this page, for now\>                                            |
+| **Package Evaluator**   | [![][pkg-0.4-img]][pkg-0.4-url] [![][pkg-0.5-img]][pkg-0.5-url]   |
+| **Build Status**        | [![][travis-img]][travis-url] [![][appveyor-img]][appveyor-url]   |
 
 ## Setup
 
 ```julia
 julia> Pkg.add("BlsData")
 ```
+
+*BlsData* uses BLS's [Public Data API](https://www.bls.gov/developers). This API limits the
+number of requests that unauthenticated users can make each day. To increase these limits,
+register a Public Data API account on the BLS website
+[here](https://data.bls.gov/registrationEngine/) to receive an API key.
+
+Make the BLS Public Data API key that you just registered accessible to *BlsData* by storing
+it in a file. Then, your API key will be automatically detected by the package.
+
+```julia
+julia> open(joinpath(homedir(), ".blsdatarc"), "w") do f
+           write(f, "0123456789abcdef0123456789abcdef")
+       end
+```
+
+## Usage
+
+Download civilian labor force level data:
+```
+using BlsData
+b = Bls()
+result = get_data(b, "LNS11000000")
+```
+
+Then, access the DataFrame using `result.data`.
 
 ## Functionality
 
@@ -97,3 +115,12 @@ The BLS API provides the following limits on requests:
     than limit
 - [NOT IMPLEMENTED] make multiple requests under the hood, and concatenate results, for
     lists of series longer than limit
+
+[pkg-0.4-img]: http://pkg.julialang.org/badges/BlsData_0.4.svg
+[pkg-0.4-url]: http://pkg.julialang.org/?pkg=BlsData
+[pkg-0.5-img]: http://pkg.julialang.org/badges/BlsData_0.5.svg
+[pkg-0.5-url]: http://pkg.julialang.org/?pkg=BlsData
+[travis-img]: https://travis-ci.org/micahjsmith/BlsData.jl.svg?branch=master
+[travis-url]: https://travis-ci.org/micahjsmith/BlsData.jl
+[appveyor-img]: https://ci.appveyor.com/api/projects/status/mcd2q5rno77ymxqj/branch/master?svg=true
+[appveyor-url]: https://ci.appveyor.com/project/micahjsmith/blsdata-jl
