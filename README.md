@@ -6,7 +6,7 @@ the [Bureau of Labor Statistics](https://www.bls.gov/data/) (BLS).
 |                         | Does this thing work?                                             |
 | ----------------------- | :---------------------------------------------------------------- |
 | **Documentation**       | \<this page, for now\>                                            |
-| **Package Evaluator**   | [![][pkg-0.4-img]][pkg-0.4-url] [![][pkg-0.5-img]][pkg-0.5-url]   |
+| **Package Evaluator**   | [![][pkg-0.5-img]][pkg-0.5-url]  [![][pkg-0.6-img]][pkg-0.6-url]  |
 | **Build Status**        | [![][travis-img]][travis-url] [![][appveyor-img]][appveyor-url]   |
 
 ## Setup
@@ -120,6 +120,8 @@ The BLS API provides the following limits on requests:
 [pkg-0.4-url]: http://pkg.julialang.org/?pkg=BlsData
 [pkg-0.5-img]: http://pkg.julialang.org/badges/BlsData_0.5.svg
 [pkg-0.5-url]: http://pkg.julialang.org/?pkg=BlsData
+[pkg-0.6-img]: http://pkg.julialang.org/badges/BlsData_0.6.svg
+[pkg-0.6-url]: http://pkg.julialang.org/?pkg=BlsData
 [travis-img]: https://travis-ci.org/micahjsmith/BlsData.jl.svg?branch=master
 [travis-url]: https://travis-ci.org/micahjsmith/BlsData.jl
 [appveyor-img]: https://ci.appveyor.com/api/projects/status/mcd2q5rno77ymxqj/branch/master?svg=true
