@@ -1,7 +1,7 @@
 name = "BlsData"
 uuid = "bdc3b988-716f-514a-9703-6a7af59ca400"
-author = ["Micah Smith <micahjsmith@gmail.com>"]
 version = "0.0.2"
+author = ["Micah Smith <micahjsmith@gmail.com>"]
 
 [deps]
 Compat = "34da2185-b29b-5c13-b0c7-acf172513d20"

@@ -1,19 +1,23 @@
 # Documentation: http://docs.travis-ci.com/user/languages/julia/
 language: julia
+
 os:
   - linux
   - osx
+
 julia:
   - 0.7
   - 1.0
   - nightly
+
 matrix:
-    allow_failures:
-        - julia: nightly
-          os: linux
+  allow_failures:
+    - julia: nightly
+      os: linux
+
 notifications:
   email: false
-# uncomment the following lines to override the default test script
-#script:
-#  - if [[ -a .git/shallow ]]; then git fetch --unshallow; fi
-#  - julia -e 'Pkg.clone(pwd()); Pkg.build("BLS"); Pkg.test("BLS"; coverage=true)'
+
+script:
+  - if [[ -a .git/shallow ]]; then git fetch --unshallow; fi
+  - julia --project --check-bounds=yes -e 'import Pkg; Pkg.build(); Pkg.test()'
