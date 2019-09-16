@@ -159,7 +159,7 @@ end
 function Base.show(io::IO, s::BlsSeries)
     @printf io "BlsSeries\n"
     @printf io "\tid: %s\n" s.id
-    @printf io "\tseries: %dx%d DataFrame with columns %s\n" size(s.data)...  names(s.data)
+    @printf io "\tdata: %dx%d DataFrame with columns %s\n" size(s.data)...  names(s.data)
     @printf io "\tcatalog: %s\n" s.catalog
 end
 
