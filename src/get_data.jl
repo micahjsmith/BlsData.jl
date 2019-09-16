@@ -110,6 +110,15 @@ function append_result!(data, result)
     end
 end
 
+function is_catalog_okay(catalog, message)
+    # Catalog okay?
+    catalog &&
+        !isempty(message) &&
+        !any(s->occursin(BLS_RESPONSE_CATALOG_FAIL1, s), message) &&
+        !any(s->occursin(BLS_RESPONSE_CATALOG_FAIL2, s), message)
+end
+
+
 # Worker method for a single request
 function _get_data(b::Bls, series::Array{T,1},
                    startyear::Int, endyear::Int, catalog::Bool) where {T<:AbstractString}
@@ -166,11 +175,7 @@ function _get_data(b::Bls, series::Array{T,1},
         return [EMPTY_RESPONSE() for i in 1:n_series]
     end
 
-    # Catalog okay?
-    catalog_okay = catalog &&
-        !isempty(response_json["message"]) &&
-        !any(s->occursin(s, BLS_RESPONSE_CATALOG_FAIL1), response_json["message"]) &&
-        !any(s->occursin(s, BLS_RESPONSE_CATALOG_FAIL2), response_json["message"])
+    catalog_okay = is_catalog_okay(catalog, response_json["message"])
 
     # Parse response into DataFrames, one for each series
     @assert n_series == length(response_json["Results"]["series"])
