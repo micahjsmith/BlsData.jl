@@ -2,10 +2,14 @@ isdefined(Base, :__precompile__) && __precompile__()
 
 module BlsData
 
+using Compat
 using DataFrames
+
+import Dates
 import JSON
 import HttpCommon
-using Compat
+import HTTP
+import Printf: @printf
 
 export
     # Bls type
@@ -44,8 +48,10 @@ function log_error(url, payload, headers, response)
             println(f, JSON.json(payload))
             println(f, headers)
             println(f, "Response")
-            println(f, String(response)
+            println(f, String(response))
         end
+    catch e
+        # pass
     end
 end
 
@@ -77,11 +83,11 @@ Notes
   catalog metadata available.
 
 """
-type Bls
+mutable struct Bls
     url::AbstractString
     key::AbstractString
     n_requests::Int16
-    t_created::DateTime
+    t_created::Dates.DateTime
 end
 function Bls(key="")
     if isempty(key)
@@ -105,7 +111,7 @@ function Bls(key="")
 
     url = DEFAULT_API_URL
     n_requests = 0
-    t_created = now()
+    t_created = Dates.now()
     Bls(url, key, n_requests, t_created)
 end
 
@@ -118,8 +124,8 @@ requests_remaining(b::Bls) = LIMIT_DAILY_QUERY[get_api_version(b)] - requests_ma
 
 function increment_requests!(b::Bls)
     # Reset request if we are in a new day!
-    if Dates.day(now()) ≠ Dates.day(b.t_created)
-        b.t_created = now()
+    if Dates.day(Dates.now()) ≠ Dates.day(b.t_created)
+        b.t_created = Dates.now()
         b.n_requests = 0
     end
 
@@ -144,7 +150,7 @@ s.data
 s.catalog
 ```
 """
-type BlsSeries
+mutable struct BlsSeries
     id::AbstractString
     data::DataFrame
     catalog::AbstractString

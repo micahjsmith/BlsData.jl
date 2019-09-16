@@ -20,15 +20,14 @@ A `BlsSeries`, or an array of `BlsSeries`.
 function get_data(b::Bls, series::AbstractString; kwargs...)
    return get_data(b, [series]; kwargs...)
 end
-function get_data{T<:AbstractString}(b::Bls, series::Array{T, 1};
-                                     startyear::Int = typemin(Int),
-                                     endyear::Int   = typemin(Int),
-                                     catalog::Bool  = false)
-
+function get_data(b::Bls, series::Array{T, 1};
+                  startyear::Int = typemin(Int),
+                  endyear::Int   = typemin(Int),
+                  catalog::Bool  = false) where {T<:AbstractString}
     # Resolve default and user-specified date ranges
     if startyear == endyear == typemin(Int)
         # If neither startyear nor endyear is specified
-        endyear = Int(Dates.year(now()))
+        endyear = Int(Dates.year(Dates.now()))
         startyear = endyear - (LIMIT_YEARS_PER_QUERY[get_api_version(b)]-1)
     elseif startyear == typemin(Int) && endyear ≠ typemin(Int)
         # If only endyear is specified
@@ -38,7 +37,7 @@ function get_data{T<:AbstractString}(b::Bls, series::Array{T, 1};
         endyear = startyear + (LIMIT_YEARS_PER_QUERY[get_api_version(b)]-1)
     end
     @assert endyear > startyear
-    @assert startyear ≤ Int(Dates.year(now()))
+    @assert startyear ≤ Int(Dates.year(Dates.now()))
 
     # Make multiple requests for year range greater than limit
     limit = LIMIT_YEARS_PER_QUERY[get_api_version(b)]
@@ -112,9 +111,8 @@ function append_result!(data, result)
 end
 
 # Worker method for a single request
-function _get_data{T<:AbstractString}(b::Bls, series::Array{T,1},
-                                      startyear::Int, endyear::Int, catalog::Bool)
-
+function _get_data(b::Bls, series::Array{T,1},
+                   startyear::Int, endyear::Int, catalog::Bool) where {T<:AbstractString}
     n_series = length(series)
 
     # Setup payload
@@ -176,7 +174,7 @@ function _get_data{T<:AbstractString}(b::Bls, series::Array{T,1},
 
     # Parse response into DataFrames, one for each series
     @assert n_series == length(response_json["Results"]["series"])
-    out = Array{BlsSeries,1}(n_series)
+    out = Array{BlsSeries,1}(undef, n_series)
     for (i, series) in enumerate(response_json["Results"]["series"])
         seriesID = series["seriesID"]
         catalog_out = if catalog_okay
@@ -188,8 +186,8 @@ function _get_data{T<:AbstractString}(b::Bls, series::Array{T,1},
         catalog_out = join(catalog_out, ". ")
 
         data   = map(parse_period_dict, series["data"])
-        dates  = flipdim([x[1] for x in data],1)
-        values = flipdim([x[2] for x in data],1)
+        dates  = reverse([x[1] for x in data],1)
+        values = reverse([x[2] for x in data],1)
         df = DataFrame(date=dates, value=values)
 
         # Data may not be returned in order, for some reason.
@@ -201,24 +199,24 @@ function _get_data{T<:AbstractString}(b::Bls, series::Array{T,1},
     return out
 end
 
-function parse_period_dict{T<:AbstractString}(dict::Dict{T,Any})
-    value = float(dict["value"])
+function parse_period_dict(dict::Dict{T,Any}) where {T<:AbstractString}
+    value = parse(Float64, dict["value"])
     year  = parse(Int, dict["year"])
 
     period = dict["period"]
     # Monthly data
-    if ismatch(r"M\d\d", period) && period ≠ "M13"
+    if occursin(r"M\d\d", period) && period ≠ "M13"
         month = parse(Int, period[2:3])
-        date = Date(year, month, 1)
+        date = Dates.Date(year, month, 1)
 
     # Quarterly data
-    elseif ismatch(r"Q\d\d", period)
+    elseif occursin(r"Q\d\d", period)
         quarter = parse(Int, period[3])
-        date = Date(year, 3*quarter-2, 1)
+        date = Dates.Date(year, 3*quarter-2, 1)
 
     # Annual data
-    elseif ismatch(r"A\d\d", period)
-        date = Date(year, 1, 1)
+    elseif occursin(r"A\d\d", period)
+        date = Dates.Date(year, 1, 1)
 
     # Not implemented
     else
