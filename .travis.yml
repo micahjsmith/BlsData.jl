@@ -13,7 +13,6 @@ julia:
 matrix:
   allow_failures:
     - julia: nightly
-      os: linux
 
 notifications:
   email: false
