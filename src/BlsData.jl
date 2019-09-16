@@ -92,8 +92,8 @@ end
 function Bls(key="")
     if isempty(key)
         try
-            open(joinpath(homedir(),".blsdatarc"), "r") do f
-                key = readstring(f)
+            key = open(joinpath(homedir(),".blsdatarc"), "r") do f
+                read(f, String)
             end
             key = rstrip(key)
             @printf "API key loaded.\n"
