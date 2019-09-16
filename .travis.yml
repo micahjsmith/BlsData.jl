@@ -4,14 +4,14 @@ os:
   - linux
   - osx
 julia:
-  - 0.5
-  - 0.6
+  - 0.7
+  - 1.0
   - release
+  - nightly
 matrix:
     allow_failures:
         - julia: nightly
           os: linux
-        - julia: release
 notifications:
   email: false
 # uncomment the following lines to override the default test script
