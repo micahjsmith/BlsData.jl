@@ -44,7 +44,7 @@ function get_data{T<:AbstractString}(b::Bls, series::Array{T, 1};
     limit = LIMIT_YEARS_PER_QUERY[get_api_version(b)]
     nrequests = div(endyear-startyear, limit) + 1
     if nrequests > requests_remaining(b)
-        warn("Insufficient number of requests remaining ", "(", nrequests, " needed ", 
+        warn("Insufficient number of requests remaining ", "(", nrequests, " needed ",
             requests_remaining(b), " remaining).")
         return if length(series) > 1
             [EMPTY_RESPONSE() for i in 1:length(series)]
@@ -95,7 +95,7 @@ function append_result!(data, result)
         end
 
         @assert result[i].id==data[i].id
-        
+
         # It's possible that the first df, from 'data', has no rows but differently typed
         # columns from the second df. In this case, we ditch the first df entirely.
         if nrow(data[i].data) > 0
@@ -112,7 +112,7 @@ function append_result!(data, result)
 end
 
 # Worker method for a single request
-function _get_data{T<:AbstractString}(b::Bls, series::Array{T,1}, 
+function _get_data{T<:AbstractString}(b::Bls, series::Array{T,1},
                                       startyear::Int, endyear::Int, catalog::Bool)
 
     n_series = length(series)
@@ -130,18 +130,19 @@ function _get_data{T<:AbstractString}(b::Bls, series::Array{T,1},
     end
 
     # Submit POST request to BLS
-    response = Requests.post(url; json=payload, headers=headers)
+    body = JSON.json(payload)
+    response = HTTP.request("POST", url, headers, body)
 
     # Check if request succeeded
     status = response.status
     if response.status == 200
-        response_json = Requests.json(response)
+        response_json = JSON.parse(String(copy(response.body)))
         increment_requests!(b)
     elseif response.status == 202
         # A 202 status code can be returned to note that "Your request is processing.". It's
         # unclear how BLS treats this, so we just try to process anyway. Exceptions are
         # expected.
-        response_json = Requests.json(response)
+        response_json = JSON.parse(String(copy(response.body)))
         increment_requests!(b)
     elseif haskey(BLS_STATUS_CODE_REASONS, response.status)
         reason = BLS_STATUS_CODE_REASONS[status]
@@ -223,6 +224,6 @@ function parse_period_dict{T<:AbstractString}(dict::Dict{T,Any})
     else
         error("Data of frequency ", period, " not implemented")
     end
-    
+
     return (date, value)
 end
