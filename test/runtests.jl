@@ -1,5 +1,5 @@
 using BlsData
-using Base.Test
+using Test
 
 let
     b = Bls()
