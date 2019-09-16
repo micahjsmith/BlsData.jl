@@ -169,8 +169,8 @@ function _get_data(b::Bls, series::Array{T,1},
     # Catalog okay?
     catalog_okay = catalog &&
         !isempty(response_json["message"]) &&
-        !any(s->contains(s, BLS_RESPONSE_CATALOG_FAIL1), response_json["message"]) &&
-        !any(s->contains(s, BLS_RESPONSE_CATALOG_FAIL2), response_json["message"])
+        !any(s->occursin(s, BLS_RESPONSE_CATALOG_FAIL1), response_json["message"]) &&
+        !any(s->occursin(s, BLS_RESPONSE_CATALOG_FAIL2), response_json["message"])
 
     # Parse response into DataFrames, one for each series
     @assert n_series == length(response_json["Results"]["series"])
