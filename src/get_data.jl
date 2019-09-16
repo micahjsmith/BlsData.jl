@@ -43,7 +43,7 @@ function get_data(b::Bls, series::Array{T, 1};
     limit = LIMIT_YEARS_PER_QUERY[get_api_version(b)]
     nrequests = div(endyear-startyear, limit) + 1
     if nrequests > requests_remaining(b)
-        warn("Insufficient number of requests remaining ", "(", nrequests, " needed ",
+        println("Insufficient number of requests remaining ", "(", nrequests, " needed ",
             requests_remaining(b), " remaining).")
         return if length(series) > 1
             [EMPTY_RESPONSE() for i in 1:length(series)]
@@ -89,7 +89,7 @@ function append_result!(data, result)
     for i=1:length(result)
         # Simply don't attempt to append empty results
         if isempty(result[i])
-            warn("Empty response from server ignored.")
+            println("Empty response from server ignored.")
             continue
         end
 
@@ -160,7 +160,7 @@ function _get_data(b::Bls, series::Array{T,1},
         else
             "<no message returned>"
         end
-        warn("API request failed with status $(status): $(message)")
+        println("API request failed with status $(status): $(message)")
 
         # Return empty response for each series
         return [EMPTY_RESPONSE() for i in 1:n_series]
@@ -169,8 +169,8 @@ function _get_data(b::Bls, series::Array{T,1},
     # Catalog okay?
     catalog_okay = catalog &&
         !isempty(response_json["message"]) &&
-        !isempty(find(s->contains(s, BLS_RESPONSE_CATALOG_FAIL1), response_json["message"])) &&
-        !isempty(find(s->contains(s, BLS_RESPONSE_CATALOG_FAIL2), response_json["message"]))
+        !any(s->contains(s, BLS_RESPONSE_CATALOG_FAIL1), response_json["message"]) &&
+        !any(s->contains(s, BLS_RESPONSE_CATALOG_FAIL2), response_json["message"])
 
     # Parse response into DataFrames, one for each series
     @assert n_series == length(response_json["Results"]["series"])

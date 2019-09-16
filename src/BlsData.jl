@@ -165,8 +165,8 @@ end
 
 EMPTY_RESPONSE() = BlsSeries("",DataFrame(),"")
 function Base.isempty(s::BlsSeries)
-    for name in fieldnames(s)
-        if !isempty(getfield(s, name))
+    for name in propertynames(s)
+        if !isempty(getproperty(s, name))
             return false
         end
     end
